@@ -1,0 +1,1164 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Microclimate Site Assessment</title>
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,600;1,400&family=Source+Serif+4:ital,opsz,wght@0,8..60,300;0,8..60,400;1,8..60,300&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/js-yaml/4.1.0/js-yaml.min.js"></script>
+<style>
+:root {
+  --soil: #3d2b1f; --bark: #5c3d2e; --moss: #4a5e3a; --sage: #7a8c6e;
+  --straw: #c9b07a; --parchment: #f5f0e8; --cream: #faf7f2;
+  --ink: #1e1a15; --rust: #8b4513;
+}
+* { box-sizing: border-box; margin: 0; padding: 0; }
+
+body {
+  background: var(--parchment);
+  background-image:
+    radial-gradient(ellipse at 20% 80%, rgba(74,94,58,0.06) 0%, transparent 50%),
+    radial-gradient(ellipse at 80% 20%, rgba(139,69,19,0.05) 0%, transparent 50%);
+  font-family: 'Source Serif 4', Georgia, serif;
+  color: var(--ink);
+  min-height: 100vh;
+  padding: 2rem 1rem 4rem;
+}
+
+.page {
+  max-width: 880px; margin: 0 auto;
+  background: var(--cream);
+  border: 1px solid rgba(92,61,46,0.2);
+  box-shadow: 0 2px 4px rgba(61,43,31,0.08), 0 8px 24px rgba(61,43,31,0.06),
+    inset 0 0 0 6px var(--cream), inset 0 0 0 7px rgba(92,61,46,0.15);
+  padding: 3rem 3.5rem;
+  position: relative;
+}
+.page::before {
+  content: ''; position: absolute;
+  top: 18px; left: 18px; right: 18px; bottom: 18px;
+  border: 1px solid rgba(92,61,46,0.12); pointer-events: none;
+}
+.page::after {
+  content: '\2767'; position: absolute;
+  bottom: 28px; right: 32px;
+  font-size: 1.4rem; color: var(--sage); opacity: 0.4;
+}
+
+header {
+  text-align: center; border-bottom: 2px solid var(--bark);
+  padding-bottom: 1.4rem; margin-bottom: 2rem;
+}
+header::after {
+  content: '-- * --'; display: block; color: var(--sage);
+  font-size: 0.75rem; letter-spacing: 0.3em; margin-top: 0.8rem;
+}
+
+h1 {
+  font-family: 'Playfair Display', Georgia, serif;
+  font-size: 1.65rem; font-weight: 600; color: var(--soil); letter-spacing: 0.02em;
+}
+h1 span {
+  display: block; font-size: 0.85rem; font-weight: 400;
+  font-style: italic; color: var(--sage); letter-spacing: 0.05em; margin-top: 0.3rem;
+}
+
+/* ── SITE IDENTIFICATION ── */
+.site-block {
+  margin-bottom: 2rem; padding-bottom: 2rem;
+  border-bottom: 2px solid rgba(92,61,46,0.25);
+}
+.site-block-title {
+  font-family: 'Playfair Display', Georgia, serif;
+  font-size: 0.75rem; font-weight: 600; letter-spacing: 0.16em;
+  text-transform: uppercase; color: var(--sage);
+  margin-bottom: 1.2rem;
+  display: flex; align-items: center; gap: 1rem;
+}
+.site-block-title::before, .site-block-title::after {
+  content: ''; flex: 1; height: 1px; background: rgba(92,61,46,0.2);
+}
+
+.meta-grid {
+  display: grid; grid-template-columns: 1fr 1fr;
+  gap: 1rem 2rem;
+}
+.meta-grid .full { grid-column: 1 / -1; }
+
+/* ── MICROCLIMATE CARDS ── */
+#mc-list { display: flex; flex-direction: column; gap: 1.5rem; margin-bottom: 1.5rem; }
+
+.mc-card {
+  border: 1px solid rgba(92,61,46,0.25);
+  border-radius: 3px;
+  background: rgba(245,240,232,0.4);
+  overflow: hidden;
+}
+
+.mc-header {
+  display: flex; align-items: center; gap: 0.8rem;
+  padding: 0.9rem 1.2rem;
+  background: rgba(92,61,46,0.07);
+  border-bottom: 1px solid rgba(92,61,46,0.15);
+  cursor: pointer;
+  user-select: none;
+}
+
+.mc-header:hover { background: rgba(92,61,46,0.11); }
+
+.mc-toggle {
+  font-size: 0.85rem; color: var(--sage);
+  transition: transform 0.25s;
+  flex-shrink: 0; width: 1rem; text-align: center;
+}
+
+.mc-card.collapsed .mc-toggle { transform: rotate(-90deg); }
+
+.mc-name-input {
+  font-family: 'Playfair Display', Georgia, serif;
+  font-size: 1rem; font-weight: 600; color: var(--soil);
+  border: none; background: transparent;
+  outline: none; flex: 1;
+  cursor: text;
+  border-bottom: 1px dashed transparent;
+  transition: border-color 0.2s;
+  padding: 0;
+}
+.mc-name-input:focus { border-bottom-color: var(--moss); cursor: text; }
+.mc-name-input::placeholder { color: rgba(92,61,46,0.4); font-weight: 400; }
+
+.mc-badge {
+  font-size: 0.72rem; letter-spacing: 0.06em; text-transform: uppercase;
+  color: var(--sage); background: rgba(74,94,58,0.1);
+  padding: 0.15rem 0.5rem; border-radius: 2px;
+  white-space: nowrap;
+}
+
+.mc-delete {
+  background: none; border: none; cursor: pointer;
+  color: rgba(139,69,19,0.4); font-size: 0.9rem;
+  padding: 0.1rem 0.3rem; transition: color 0.15s; flex-shrink: 0;
+  letter-spacing: 0; font-family: inherit;
+}
+.mc-delete:hover { color: var(--rust); }
+
+.mc-body {
+  padding: 1.5rem 1.5rem 1rem;
+  transition: max-height 0.3s ease, opacity 0.2s ease;
+  max-height: 9999px; opacity: 1; overflow: hidden;
+}
+.mc-card.collapsed .mc-body { max-height: 0; opacity: 0; padding-top: 0; padding-bottom: 0; }
+
+/* ── ADD MC BUTTON ── */
+.add-mc-btn {
+  display: flex; align-items: center; justify-content: center; gap: 0.6rem;
+  width: 100%; padding: 0.9rem;
+  border: 2px dashed rgba(92,61,46,0.25);
+  background: transparent; border-radius: 3px;
+  font-family: 'Source Serif 4', Georgia, serif;
+  font-size: 0.88rem; letter-spacing: 0.06em;
+  color: var(--sage); cursor: pointer;
+  transition: all 0.2s; margin-bottom: 2rem;
+}
+.add-mc-btn:hover { border-color: var(--moss); color: var(--moss); background: rgba(74,94,58,0.04); }
+
+/* ── FORM ELEMENTS (shared) ── */
+.chapter {
+  font-family: 'Playfair Display', Georgia, serif;
+  font-size: 0.68rem; font-weight: 600; letter-spacing: 0.18em;
+  text-transform: uppercase; color: var(--sage);
+  display: flex; align-items: center; gap: 1rem;
+  margin: 1.8rem 0 1rem;
+}
+.chapter::before, .chapter::after {
+  content: ''; flex: 1; height: 1px; background: rgba(92,61,46,0.15);
+}
+
+.section { margin-bottom: 1.5rem; padding-bottom: 1.2rem; border-bottom: 1px solid rgba(92,61,46,0.12); }
+.section:last-of-type { border-bottom: none; margin-bottom: 0; }
+
+.section-title {
+  font-family: 'Playfair Display', Georgia, serif;
+  font-size: 0.9rem; font-weight: 600; color: var(--soil);
+  letter-spacing: 0.03em; margin-bottom: 0.8rem;
+  display: flex; align-items: center; gap: 0.6rem;
+}
+.section-title::after { content: ''; flex: 1; height: 1px; background: rgba(92,61,46,0.15); }
+
+label.field-label {
+  font-size: 0.78rem; font-weight: 400; color: var(--bark);
+  letter-spacing: 0.06em; text-transform: uppercase;
+  white-space: nowrap; flex-shrink: 0;
+}
+
+.field-row { display: flex; align-items: baseline; gap: 0.5rem; }
+
+input[type="text"], input[type="date"], textarea {
+  background: transparent; border: none;
+  border-bottom: 1px solid rgba(92,61,46,0.3);
+  padding: 0.2rem 0.3rem;
+  font-family: 'Source Serif 4', Georgia, serif;
+  font-size: 0.88rem; color: var(--ink); width: 100%;
+  outline: none; transition: border-color 0.2s;
+}
+input[type="text"]:focus, input[type="date"]:focus { border-bottom-color: var(--moss); }
+
+textarea {
+  resize: vertical; min-height: 50px;
+  border: 1px solid rgba(92,61,46,0.2); padding: 0.4rem 0.5rem;
+  margin-top: 0.3rem; border-radius: 2px;
+}
+textarea:focus { border-color: var(--moss); outline: none; }
+
+.row-label {
+  font-size: 0.75rem; text-transform: uppercase;
+  letter-spacing: 0.06em; color: var(--bark);
+  margin-bottom: 0.25rem; margin-top: 0.7rem;
+}
+
+.check-group { display: flex; flex-wrap: wrap; gap: 0.35rem 1rem; margin: 0.4rem 0; }
+
+.check-item {
+  display: flex; align-items: center; gap: 0.3rem;
+  cursor: pointer; font-size: 0.85rem; color: var(--ink);
+}
+.check-item:hover { color: var(--moss); }
+
+input[type="checkbox"] {
+  appearance: none; -webkit-appearance: none;
+  width: 12px; height: 12px;
+  border: 1px solid rgba(92,61,46,0.45); border-radius: 2px;
+  cursor: pointer; position: relative; flex-shrink: 0;
+  transition: all 0.15s; background: transparent;
+}
+input[type="checkbox"]:checked { background: var(--moss); border-color: var(--moss); }
+input[type="checkbox"]:checked::after {
+  content: 'v'; position: absolute; top: -1px; left: 1px;
+  font-size: 9px; color: white; line-height: 1;
+}
+
+input[type="radio"] {
+  appearance: none; -webkit-appearance: none;
+  width: 12px; height: 12px;
+  border: 1px solid rgba(92,61,46,0.45); border-radius: 50%;
+  cursor: pointer; position: relative; flex-shrink: 0;
+  background: transparent; transition: all 0.15s;
+}
+input[type="radio"]:checked { border-color: var(--rust); }
+input[type="radio"]:checked::after {
+  content: ''; position: absolute; top: 2px; left: 2px;
+  width: 6px; height: 6px; border-radius: 50%; background: var(--rust);
+}
+
+.radio-group { display: flex; flex-wrap: wrap; gap: 0.35rem 1rem; margin: 0.4rem 0; }
+.radio-item { display: flex; align-items: center; gap: 0.3rem; cursor: pointer; font-size: 0.85rem; }
+
+.two-col { display: grid; grid-template-columns: 1fr 1fr; gap: 0.5rem 1.5rem; }
+.three-col { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 0.5rem 1.2rem; }
+.four-col { display: grid; grid-template-columns: repeat(4, 1fr); gap: 0.5rem 0.8rem; }
+
+.sector-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 0.6rem 1.5rem; margin-top: 0.5rem; }
+.sector-item { display: flex; flex-direction: column; gap: 0.25rem; }
+.sector-item label { font-size: 0.74rem; color: var(--bark); letter-spacing: 0.04em; }
+
+.note-box {
+  background: rgba(74,94,58,0.06); border-left: 3px solid var(--sage);
+  padding: 0.4rem 0.7rem; font-size: 0.78rem; font-style: italic;
+  color: var(--moss); margin: 0.4rem 0; border-radius: 0 3px 3px 0;
+}
+
+/* Zone badges */
+.zone-selector { display: flex; gap: 0.4rem; flex-wrap: wrap; margin-top: 0.4rem; }
+.zone-radio { display: none; }
+.zone-btn {
+  display: inline-block; padding: 0.25rem 0.65rem;
+  border: 1px solid rgba(92,61,46,0.3); border-radius: 2px;
+  font-size: 0.8rem; cursor: pointer; color: var(--bark);
+  user-select: none; font-family: 'Source Serif 4', Georgia, serif;
+  transition: all 0.15s;
+}
+.zone-radio:checked + .zone-btn { background: var(--moss); color: white; border-color: var(--moss); }
+
+/* Tables */
+.amend-table { width: 100%; border-collapse: collapse; margin-top: 0.4rem; font-size: 0.82rem; }
+.amend-table th {
+  text-align: left; font-size: 0.7rem; letter-spacing: 0.06em;
+  text-transform: uppercase; color: var(--bark); padding: 0.25rem 0.35rem;
+  border-bottom: 1px solid rgba(92,61,46,0.25); font-weight: 400;
+}
+.amend-table td { padding: 0.15rem 0.25rem; border-bottom: 1px solid rgba(92,61,46,0.08); }
+.amend-table td input { font-size: 0.82rem; padding: 0.1rem 0.15rem; }
+
+.add-row-btn {
+  font-size: 0.76rem; color: var(--moss); background: none; border: none;
+  cursor: pointer; padding: 0.4rem 0 0; letter-spacing: 0.04em;
+  font-family: 'Source Serif 4', Georgia, serif;
+  text-decoration: underline; text-underline-offset: 2px; display: block;
+}
+.add-row-btn:hover { color: var(--soil); }
+
+.remove-row {
+  color: var(--rust); background: none; border: none;
+  cursor: pointer; font-size: 0.85rem; padding: 0 0.15rem;
+  opacity: 0.35; transition: opacity 0.15s;
+}
+.remove-row:hover { opacity: 1; }
+
+.temp-range { display: grid; grid-template-columns: repeat(4, 1fr); gap: 0.5rem 0.8rem; margin-top: 0.4rem; }
+.temp-item { display: flex; flex-direction: column; gap: 0.25rem; }
+.temp-item > label { font-size: 0.7rem; color: var(--bark); letter-spacing: 0.05em; text-transform: uppercase; }
+
+/* Actions */
+.actions {
+  display: flex; gap: 0.8rem; justify-content: center;
+  margin-top: 2.5rem; padding-top: 2rem;
+  border-top: 2px solid rgba(92,61,46,0.2); flex-wrap: wrap;
+}
+button {
+  font-family: 'Source Serif 4', Georgia, serif;
+  font-size: 0.85rem; letter-spacing: 0.06em;
+  padding: 0.65rem 1.6rem; border: none;
+  cursor: pointer; transition: all 0.2s; border-radius: 2px;
+}
+.btn-primary { background: var(--moss); color: white; }
+.btn-primary:hover { background: var(--soil); }
+.btn-secondary { background: transparent; color: var(--bark); border: 1px solid rgba(92,61,46,0.35); }
+.btn-secondary:hover { background: rgba(92,61,46,0.07); }
+.btn-danger { background: transparent; color: var(--rust); border: 1px solid rgba(139,69,19,0.25); }
+.btn-danger:hover { background: rgba(139,69,19,0.06); }
+.btn-load {
+  display: inline-flex; align-items: center; justify-content: center;
+  font-family: 'Source Serif 4', Georgia, serif;
+  font-size: 0.85rem; letter-spacing: 0.06em;
+  padding: 0.65rem 1.6rem; border-radius: 2px; cursor: pointer;
+  background: transparent; color: var(--bark);
+  border: 1px solid rgba(92,61,46,0.35); transition: all 0.2s;
+}
+.btn-load:hover { background: rgba(92,61,46,0.07); }
+.btn-danger:hover { background: rgba(139,69,19,0.06); }
+
+
+#toast {
+  position: fixed; bottom: 2rem; left: 50%;
+  transform: translateX(-50%) translateY(20px);
+  background: var(--soil); color: var(--parchment);
+  padding: 0.65rem 1.4rem; border-radius: 3px; font-size: 0.83rem;
+  opacity: 0; transition: all 0.3s; pointer-events: none; z-index: 999;
+}
+#toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+
+#yaml-preview {
+  display: none; margin-top: 1.5rem;
+  background: var(--soil); color: #c9b07a;
+  padding: 1.4rem; border-radius: 3px;
+  font-family: 'Courier New', monospace; font-size: 0.76rem;
+  line-height: 1.7; white-space: pre; overflow-x: auto;
+  max-height: 420px; overflow-y: auto;
+}
+
+.refs {
+  margin-top: 1.5rem; font-size: 0.7rem; color: var(--sage);
+  font-style: italic; text-align: center; line-height: 1.8;
+}
+.refs a { color: var(--sage); }
+
+@media (max-width: 600px) {
+  .page { padding: 1.5rem; }
+  .meta-grid, .two-col, .three-col, .four-col, .temp-range { grid-template-columns: 1fr; }
+  .sector-grid { grid-template-columns: 1fr; }
+}
+</style>
+</head>
+<body>
+<div class="page">
+  <header>
+    <h1>Microclimate Site Assessment
+      <span>Property-wide record with per-zone assessments</span>
+    </h1>
+  </header>
+
+  <form id="assessmentForm">
+
+    <!-- ══ SITE IDENTIFICATION (shared across all microclimates) ══ -->
+    <div class="site-block">
+      <div class="site-block-title">Site Identification</div>
+      <div class="meta-grid">
+        <div class="field-row">
+          <label class="field-label">Date</label>
+          <input type="date" id="site_date">
+        </div>
+        <div class="field-row">
+          <label class="field-label">Sunset Zone</label>
+          <input type="text" id="site_sunsetZone" placeholder="e.g. 3A">
+        </div>
+        <div class="field-row">
+          <label class="field-label">USDA Zone</label>
+          <input type="text" id="site_usdaZone" placeholder="e.g. 7b">
+        </div>
+        <div class="field-row">
+          <label class="field-label">Elevation (ft)</label>
+          <input type="text" id="site_elevation" placeholder="e.g. 4900">
+        </div>
+        <div class="field-row full">
+          <label class="field-label">Location</label>
+          <input type="text" id="site_location" placeholder="neighborhood, natural area, water feature, freeway, etc.">
+        </div>
+        <div class="field-row">
+          <label class="field-label">Coordinates</label>
+          <input type="text" id="site_coords" placeholder="lat, lon">
+        </div>
+        <div class="field-row">
+          <label class="field-label">Overall orientation</label>
+          <input type="text" id="site_orientation" placeholder="slope faces, cardinal refs...">
+        </div>
+        <div class="field-row full">
+          <label class="field-label">Site notes</label>
+          <input type="text" id="site_notes" placeholder="property overview, design intent, Koppen/climate type...">
+        </div>
+      </div>
+
+      <div class="site-block-title" style="margin-top:1.5rem">Sector Analysis</div>
+      <div class="note-box">Site-wide energy flows — where sun, wind, water, fire, and wildlife arrive from. Record once for the whole property; per-zone interactions are captured in each zone's fields.</div>
+      <div class="sector-grid" style="margin-top:0.8rem">
+        <div class="sector-item"><label>Sun — summer arc</label><input type="text" id="site_secSunS" placeholder="bearing / arc / hours"></div>
+        <div class="sector-item"><label>Sun — winter arc</label><input type="text" id="site_secSunW" placeholder="bearing / arc / hours"></div>
+        <div class="sector-item"><label>Prevailing wind</label><input type="text" id="site_secWindP" placeholder="direction, speed, season"></div>
+        <div class="sector-item"><label>Cold frontal wind</label><input type="text" id="site_secWindC" placeholder="direction, season"></div>
+        <div class="sector-item"><label>Water flow / drainage</label><input type="text" id="site_secWater" placeholder="flow direction, catchment area"></div>
+        <div class="sector-item"><label>Cold air drainage</label><input type="text" id="site_secColdAir" placeholder="source direction, main path, outlet"></div>
+        <div class="sector-item"><label>Fire risk</label><input type="text" id="site_secFire" placeholder="direction, fuel sources, defensible space"></div>
+        <div class="sector-item"><label>Wildlife / edge</label><input type="text" id="site_secWild" placeholder="corridors, pressures, beneficials"></div>
+        <div class="sector-item"><label>Neighbour / noise / view</label><input type="text" id="site_secNeigh" placeholder="screening needs, shared resources"></div>
+        <div class="sector-item"><label>Pollution / contamination</label><input type="text" id="site_secPoll" placeholder="road runoff, dust, spray drift"></div>
+      </div>
+    </div>
+
+    <!-- ══ MICROCLIMATE CARDS ══ -->
+    <div class="site-block-title" style="margin-bottom:1.2rem">Microclimate Assessments</div>
+    <div id="mc-list"></div>
+
+    <button type="button" class="add-mc-btn" onclick="addMicroclimate()">
+      + Add Microclimate Zone
+    </button>
+
+    <!-- ══ ACTIONS ══ -->
+    <div class="actions">
+      <label class="btn-load" title="Load a previously saved YAML file">
+        Load YAML
+        <input type="file" id="yamlFileInput" accept=".yaml,.yml" style="display:none" onchange="loadFromYAML(this)">
+      </label>
+      <button type="button" class="btn-secondary" onclick="previewYAML()">Preview YAML</button>
+      <button type="button" class="btn-primary" onclick="downloadYAML()">Save as YAML</button>
+      <button type="button" class="btn-danger" onclick="clearAll()">Clear All</button>
+    </div>
+
+    <div id="yaml-preview"></div>
+
+  </form>
+
+  <div class="refs">
+    Sunset Zone: <a href="https://www.sunsetwesterngardencollection.com/climate-zones/zone/arizona">sunsetwesterngardencollection.com</a> &nbsp;|&nbsp;
+    USDA Zone: <a href="https://planthardiness.ars.usda.gov/PHZMWeb/">planthardiness.ars.usda.gov</a> &nbsp;|&nbsp;
+    UA Extension: <a href="https://extension.arizona.edu/publication/arizona-climate-zones-and-their-application-growing-plants">Arizona Climate Zones</a>
+  </div>
+</div>
+<div id="toast"></div>
+
+<script>
+let mcCounter = 0;
+
+// ── Generate a unique field id ──
+function fid(mcId, name) { return `mc${mcId}_${name}`; }
+
+// ── Generate the HTML for one microclimate card ──
+function mcHTML(id) {
+  const p = `mc${id}_`; // prefix for all ids/names in this card
+  const zoneOpts = ['1','2','3','4','5','transition'].map(z =>
+    `<input type="radio" name="${p}permZone" value="${z}" id="${p}z${z}" class="zone-radio">
+     <label for="${p}z${z}" class="zone-btn">${z === 'transition' ? 'Transition' : 'Zone ' + z}</label>`
+  ).join('');
+
+  const checkboxes = (name, items) => items.map(([v,l]) =>
+    `<label class="check-item"><input type="checkbox" name="${p}${name}" value="${v}"> ${l}</label>`
+  ).join('');
+
+  const radioGroup = (name, items) => items.map(([v,l]) =>
+    `<label class="radio-item"><input type="radio" name="${p}${name}" value="${v}"> ${l}</label>`
+  ).join('');
+
+  return `
+  <div class="mc-card" id="mccard_${id}">
+    <div class="mc-header" onclick="toggleMC(${id})">
+      <span class="mc-toggle">&#9660;</span>
+      <input type="text" class="mc-name-input" id="${p}name" placeholder="Name this microclimate zone..."
+        onclick="event.stopPropagation()" onkeyup="updateBadge(${id})">
+      <span class="mc-badge" id="${p}badge">New Zone</span>
+      <button type="button" class="mc-delete" onclick="deleteMC(${id}, event)" title="Delete this zone">&#x2715;</button>
+    </div>
+    <div class="mc-body" id="mcbody_${id}">
+
+      <!-- PERMACULTURE CONTEXT -->
+      <div class="chapter">Permaculture Design Context</div>
+
+      <div class="section">
+        <div class="section-title">Permaculture Zone</div>
+        <div class="zone-selector">${zoneOpts}</div>
+        <div class="field-row" style="margin-top:0.7rem">
+          <label class="field-label">Notes</label>
+          <input type="text" id="${p}permZoneNotes" placeholder="zone logic, boundaries, management intensity...">
+        </div>
+      </div>
+
+      <div class="section">
+        <div class="section-title">Cold Air Drainage Detail</div>
+        <div class="two-col">
+          <div><div class="row-label">Source / upslope feature</div><input type="text" id="${p}coldSrc" placeholder="hills, terrain..." style="width:100%"></div>
+          <div><div class="row-label">Outlet / escape point</div><input type="text" id="${p}coldOut" placeholder="low point, gap, wash..." style="width:100%"></div>
+        </div>
+        <div class="row-label">Potential cold air dams</div>
+        <input type="text" id="${p}coldDams" placeholder="fences, hedges, berms, road embankments..." style="width:100%">
+        <div class="row-label">Site position</div>
+        <div class="radio-group">
+          ${radioGroup('coldPos', [['upslope','upslope (drains away)'],['midslope','midslope'],['frost_pocket','frost pocket / low point'],['flat_unclear','flat / unclear']])}
+        </div>
+        <div class="field-row" style="margin-top:0.5rem"><label class="field-label">Notes</label><input type="text" id="${p}coldNotes" placeholder="observed frost patterns, protected spots..."></div>
+      </div>
+
+      <div class="section">
+        <div class="section-title">Slope and Aspect</div>
+        <div class="three-col">
+          <div><div class="row-label">Aspect (compass bearing)</div><input type="text" id="${p}aspect" placeholder="e.g. 210 SSW" style="width:100%"></div>
+          <div><div class="row-label">Slope gradient</div><input type="text" id="${p}gradient" placeholder="e.g. 5%, gentle" style="width:100%"></div>
+          <div><div class="row-label">Slope length (ft)</div><input type="text" id="${p}slopeLen" placeholder="approx." style="width:100%"></div>
+        </div>
+        <div class="row-label">Face-specific notes</div>
+        <textarea id="${p}faceNotes" placeholder="e.g. south face hotter/drier, north face sheltered..."></textarea>
+      </div>
+
+      <div class="section">
+        <div class="section-title">Thermal Mass Inventory</div>
+        <div class="note-box">House walls, sheds, cisterns, rock, water bodies — anything storing and releasing heat.</div>
+        <table class="amend-table">
+          <thead><tr><th>Element</th><th>Material</th><th>Orientation</th><th>Estimated effect</th><th></th></tr></thead>
+          <tbody id="${p}thermalBody">
+            <tr>
+              <td><input type="text" placeholder="e.g. house wall"></td>
+              <td><input type="text" placeholder="e.g. adobe"></td>
+              <td><input type="text" placeholder="e.g. south-facing"></td>
+              <td><input type="text" placeholder="e.g. +3F overnight"></td>
+              <td><button type="button" class="remove-row" onclick="removeRow(this)">x</button></td>
+            </tr>
+          </tbody>
+        </table>
+        <button type="button" class="add-row-btn" onclick="addThermalRow('${p}thermalBody')">+ add element</button>
+      </div>
+
+      <div class="section">
+        <div class="section-title">Stacking Functions</div>
+        <textarea id="${p}stacking" rows="3" placeholder="e.g. thermal sink / social firepit space / future greenhouse site / herb garden..."></textarea>
+      </div>
+
+      <!-- STANDARD OBSERVATIONS -->
+      <div class="chapter">Microclimatic Observations</div>
+
+      <div class="section">
+        <div class="section-title">Topography</div>
+        <div class="check-group">
+          ${checkboxes('topo', [['flat','flat'],['slope','slope'],['berms','berms'],['elevated_beds','elevated beds'],['hugel','hugelkultur'],['swales','swales'],['keyhole','keyhole beds'],['elevation_changes','elevation changes'],['other','other']])}
+        </div>
+        <div class="field-row" style="margin-top:0.4rem"><label class="field-label">Notes</label><input type="text" id="${p}topoNotes" placeholder="details..."></div>
+      </div>
+
+      <div class="section">
+        <div class="section-title">Sunlight Levels</div>
+        <div class="note-box">Sun intensity varies significantly by season at high elevation.</div>
+        <div class="check-group">
+          ${checkboxes('sun', [['full_sun','full sun (<6hrs)'],['partial_sun','partial sun (3-6h)'],['part_shade','part shade (>5h)'],['open_shade','open shade'],['full_shade','full shade']])}
+        </div>
+        <div class="two-col" style="margin-top:0.6rem">
+          <div><div class="row-label">Summer direct (hrs/day)</div><input type="text" id="${p}sunS" placeholder="hrs, obstructions" style="width:100%"></div>
+          <div><div class="row-label">Winter direct (hrs/day)</div><input type="text" id="${p}sunW" placeholder="hrs, obstructions" style="width:100%"></div>
+        </div>
+        <div class="field-row" style="margin-top:0.4rem"><label class="field-label">Notes</label><input type="text" id="${p}sunNotes" placeholder="seasonal shifts, shade sources, angle effects..."></div>
+      </div>
+
+      <div class="section">
+        <div class="section-title">Observed Temperature Range</div>
+        <div class="temp-range">
+          <div class="temp-item"><label>Summer high (F)</label><input type="text" id="${p}tHiS"></div>
+          <div class="temp-item"><label>Summer low (F)</label><input type="text" id="${p}tLoS"></div>
+          <div class="temp-item"><label>Winter high (F)</label><input type="text" id="${p}tHiW"></div>
+          <div class="temp-item"><label>Winter low (F)</label><input type="text" id="${p}tLoW"></div>
+        </div>
+        <div class="two-col" style="margin-top:0.6rem">
+          <div><div class="row-label">Last frost (observed / est.)</div><input type="text" id="${p}lastFrost" placeholder="e.g. mid-April" style="width:100%"></div>
+          <div><div class="row-label">First frost (observed / est.)</div><input type="text" id="${p}firstFrost" placeholder="e.g. mid-October" style="width:100%"></div>
+        </div>
+        <div class="field-row" style="margin-top:0.4rem"><label class="field-label">Notes</label><input type="text" id="${p}tempNotes" placeholder="vs. regional baseline, thermometer placement..."></div>
+      </div>
+
+      <div class="section">
+        <div class="section-title">Soil Factors</div>
+        <div class="row-label">Compaction</div>
+        <div class="radio-group">
+          ${radioGroup('compact', [['severe','severe'],['moderate','moderate'],['somewhat','somewhat'],['not_compacted','not compacted']])}
+        </div>
+        <div class="two-col" style="margin-top:0.6rem">
+          <div class="field-row"><label class="field-label">pH low</label><input type="text" id="${p}phLo" placeholder="e.g. 7.2"></div>
+          <div class="field-row"><label class="field-label">pH high</label><input type="text" id="${p}phHi" placeholder="e.g. 8.0"></div>
+        </div>
+        <div class="row-label">Texture</div>
+        <div class="check-group">
+          ${checkboxes('texture', [['clay','clay'],['loam','loam'],['sand','sand'],['caliche','caliche'],['combination','combination']])}
+          <input type="text" id="${p}texComb" placeholder="describe combination" style="width:140px; margin-left:0.2rem">
+        </div>
+        <div class="row-label">Composition</div>
+        <div class="check-group">
+          ${checkboxes('compos', [['native','native'],['amended_native','amended native'],['purchased_mix','purchased mix'],['mulch_present','mulch present'],['biochar','biochar'],['compost','compost']])}
+        </div>
+        <div class="field-row" style="margin-top:0.4rem"><label class="field-label">Notes</label><input type="text" id="${p}soilNotes" placeholder="caliche depth, rock content, drainage behaviour..."></div>
+      </div>
+
+      <div class="section">
+        <div class="section-title">Soil Amendment History</div>
+        <table class="amend-table">
+          <thead><tr><th>Date / Season</th><th>Amendment</th><th>Amount / Rate</th><th>Purpose / Notes</th><th></th></tr></thead>
+          <tbody id="${p}amendBody">
+            <tr>
+              <td><input type="text" placeholder="spring 2025"></td>
+              <td><input type="text" placeholder="e.g. wood ash, compost tea"></td>
+              <td><input type="text" placeholder="e.g. 2lb/100sqft"></td>
+              <td><input type="text" placeholder="e.g. pH buffer"></td>
+              <td><button type="button" class="remove-row" onclick="removeRow(this)">x</button></td>
+            </tr>
+          </tbody>
+        </table>
+        <button type="button" class="add-row-btn" onclick="addAmendRow('${p}amendBody')">+ add amendment</button>
+      </div>
+
+      <div class="section">
+        <div class="section-title">Water</div>
+        <div class="row-label">Drainage Character</div>
+        <div class="check-group">
+          ${checkboxes('drain', [['dry','dry'],['wet','wet'],['well_drained','well-drained'],['low_lying','low lying spots'],['poor_drainage','poor drainage']])}
+        </div>
+        <div class="row-label">Drainage Test (in/hr)</div>
+        <div class="radio-group">
+          ${radioGroup('drainTest', [['poor','poor (<4"/hr)'],['moderate','moderate (4-8"/hr)'],['excessive','excessive (>8"/hr)'],['not_tested','not tested']])}
+        </div>
+        <div class="row-label" style="margin-top:0.6rem">Water Sources</div>
+        <div class="check-group">
+          ${checkboxes('waterSrc', [['well','well'],['municipal','municipal'],['rainwater','rainwater catchment'],['greywater','greywater'],['hauled','hauled'],['swale','swale harvest']])}
+        </div>
+        <div class="row-label" style="margin-top:0.6rem">Water Quality</div>
+        <div class="three-col">
+          <div class="field-row"><label class="field-label">Source pH</label><input type="text" id="${p}wPH" placeholder="e.g. 8.2"></div>
+          <div class="field-row"><label class="field-label">Hardness</label><input type="text" id="${p}wHard" placeholder="ppm or description"></div>
+          <div class="field-row"><label class="field-label">Na / SAR</label><input type="text" id="${p}wNa" placeholder="if tested"></div>
+        </div>
+        <div class="row-label" style="margin-top:0.6rem">Irrigation System</div>
+        <input type="text" id="${p}irrigDesc" placeholder="describe system..." style="width:100%">
+        <div class="row-label" style="margin-top:0.6rem">Other Water Features</div>
+        <div class="check-group">
+          ${checkboxes('waterFeat', [['pond','pond'],['cistern','cistern'],['swales','swales'],['fountain','fountain/waterfall'],['misters','misters'],['pool','swimming pool'],['other','other']])}
+          <input type="text" id="${p}waterFeatOther" placeholder="other..." style="width:120px; margin-left:0.2rem">
+        </div>
+        <div class="field-row" style="margin-top:0.4rem"><label class="field-label">Notes</label><input type="text" id="${p}waterNotes" placeholder="alkalinity impacts, seasonal availability, long-term pH trend..."></div>
+      </div>
+
+      <div class="section">
+        <div class="section-title">Wind Detail</div>
+        <div class="two-col">
+          <div><div class="row-label">Prevailing direction</div><input type="text" id="${p}windDir" placeholder="e.g. SW, WSW" style="width:100%"></div>
+          <div><div class="row-label">Typical speed</div><input type="text" id="${p}windSpd" placeholder="e.g. 9-16 mph" style="width:100%"></div>
+          <div><div class="row-label">Cold frontal direction</div><input type="text" id="${p}windFront" placeholder="e.g. N, NW in winter" style="width:100%"></div>
+          <div><div class="row-label">Diurnal / thermal pattern</div><input type="text" id="${p}windDiurnal" placeholder="e.g. upslope AM, downslope PM" style="width:100%"></div>
+        </div>
+        <div class="row-label" style="margin-top:0.6rem">Existing windbreaks</div>
+        <input type="text" id="${p}windExist" placeholder="fences, trees, hills, structures and orientation..." style="width:100%">
+        <div class="row-label" style="margin-top:0.4rem">Planned windbreaks</div>
+        <input type="text" id="${p}windPlan" placeholder="species, orientation, gap placement, timeline..." style="width:100%">
+      </div>
+
+      <div class="section">
+        <div class="section-title">Vegetation</div>
+        <div class="four-col">
+          <div><div class="row-label">Trees</div><input type="text" id="${p}vegTrees" placeholder="species / count" style="width:100%"></div>
+          <div><div class="row-label">Shrubs</div><input type="text" id="${p}vegShrubs" placeholder="species / count" style="width:100%"></div>
+          <div><div class="row-label">Turf / groundcover</div><input type="text" id="${p}vegTurf" placeholder="type / area" style="width:100%"></div>
+          <div><div class="row-label">Other</div><input type="text" id="${p}vegOther" placeholder="annuals, fungi..." style="width:100%"></div>
+        </div>
+      </div>
+
+      <div class="section">
+        <div class="section-title">Structures</div>
+        <div class="check-group">
+          ${checkboxes('structs', [['walls','walls'],['retaining_walls','retaining walls'],['raised_beds','raised beds'],['hardscape','hardscape'],['shade_structures','shade structures'],['boulders','boulders'],['outbuildings','outbuildings'],['greenhouse','greenhouse'],['hugel','hugelkultur'],['solar','solar infrastructure'],['cistern','cistern'],['firepit','firepit']])}
+        </div>
+        <div class="field-row" style="margin-top:0.4rem"><label class="field-label">Other</label><input type="text" id="${p}structOther" placeholder="anything not listed..."></div>
+      </div>
+
+      <div class="section">
+        <div class="section-title">Observation Flags</div>
+        <div class="check-group">
+          ${checkboxes('obsFlags', [['recent_construction','recent construction'],['excessive_salt','excessive salt'],['slopes','slopes to consider'],['erosion','erosion'],['wind_patterns','notable wind patterns'],['cold_air','cold air drainage observed'],['frost_pocket','frost pocket risk'],['heat_sink','heat sink / thermal mass'],['alkalinity','alkalinity creep from irrigation'],['fire_risk','fire risk / defensible space']])}
+        </div>
+        <div class="field-row" style="margin-top:0.7rem">
+          <label class="field-label">Wildlife / edge</label>
+          <input type="text" id="${p}wildlife" placeholder="corridors, pressures, beneficials active in this zone...">
+        </div>
+        <div class="row-label" style="margin-top:0.6rem">Additional Observations</div>
+        <textarea id="${p}obsNotes" placeholder="plant performance indicators, pest pressure, beneficial activity, microclimate anomalies..."></textarea>
+      </div>
+
+      <div class="section">
+        <div class="section-title">Zone Notes</div>
+        <textarea id="${p}zoneNotes" rows="3" placeholder="Design intentions, follow-up observations needed, current planting guild, planned guild..."></textarea>
+      </div>
+
+    </div><!-- /mc-body -->
+  </div><!-- /mc-card -->`;
+}
+
+// ── Add / remove / toggle ──
+function addMicroclimate() {
+  mcCounter++;
+  const list = document.getElementById('mc-list');
+  const div = document.createElement('div');
+  div.innerHTML = mcHTML(mcCounter);
+  list.appendChild(div.firstElementChild);
+  // scroll into view
+  const card = document.getElementById(`mccard_${mcCounter}`);
+  card.scrollIntoView({ behavior: 'smooth', block: 'start' });
+}
+
+function toggleMC(id) {
+  document.getElementById(`mccard_${id}`).classList.toggle('collapsed');
+}
+
+function deleteMC(id, event) {
+  event.stopPropagation();
+  const card = document.getElementById(`mccard_${id}`);
+  const name = document.getElementById(`mc${id}_name`).value || 'this zone';
+  if (!confirm(`Delete "${name}"?`)) return;
+  card.remove();
+  showToast('Zone deleted');
+}
+
+function updateBadge(id) {
+  const val = document.getElementById(`mc${id}_name`).value.trim();
+  document.getElementById(`mc${id}_badge`).textContent = val || 'New Zone';
+}
+
+function addThermalRow(tbodyId) {
+  const tbody = document.getElementById(tbodyId);
+  const tr = document.createElement('tr');
+  tr.innerHTML = `<td><input type="text" placeholder="element"></td><td><input type="text" placeholder="material"></td><td><input type="text" placeholder="orientation"></td><td><input type="text" placeholder="estimated effect"></td><td><button type="button" class="remove-row" onclick="removeRow(this)">x</button></td>`;
+  tbody.appendChild(tr);
+}
+
+function addAmendRow(tbodyId) {
+  const tbody = document.getElementById(tbodyId);
+  const tr = document.createElement('tr');
+  tr.innerHTML = `<td><input type="text" placeholder="season / date"></td><td><input type="text" placeholder="amendment"></td><td><input type="text" placeholder="amount / rate"></td><td><input type="text" placeholder="purpose / notes"></td><td><button type="button" class="remove-row" onclick="removeRow(this)">x</button></td>`;
+  tbody.appendChild(tr);
+}
+
+function removeRow(btn) {
+  const tbody = btn.closest('tbody');
+  if (tbody.rows.length > 1) btn.closest('tr').remove();
+}
+
+// ── Data helpers ──
+function gv(id) { const el = document.getElementById(id); return el ? el.value.trim() : ''; }
+function gc(name) { return [...document.querySelectorAll(`input[name="${name}"]:checked`)].map(e => e.value); }
+function gr(name) { const el = document.querySelector(`input[name="${name}"]:checked`); return el ? el.value : null; }
+
+function getTableRows(tbodyId) {
+  const tbody = document.getElementById(tbodyId);
+  if (!tbody) return [];
+  return [...tbody.querySelectorAll('tr')]
+    .map(row => [...row.querySelectorAll('input')].map(i => i.value.trim()))
+    .filter(r => r.some(x => x !== ''));
+}
+
+// ── Collect all mc IDs currently in DOM ──
+function getMCIds() {
+  return [...document.querySelectorAll('.mc-card')].map(el => el.id.replace('mccard_', ''));
+}
+
+function buildMCData(id) {
+  const p = `mc${id}_`;
+  const thermal = getTableRows(`${p}thermalBody`);
+  const amend = getTableRows(`${p}amendBody`);
+  return {
+    name: gv(`${p}name`) || `Zone ${id}`,
+    permaculture_zone: gr(`${p}permZone`),
+    perm_zone_notes: gv(`${p}permZoneNotes`),
+
+    cold_air_drainage: {
+      source: gv(`${p}coldSrc`), outlet: gv(`${p}coldOut`),
+      potential_dams: gv(`${p}coldDams`), site_position: gr(`${p}coldPos`),
+      notes: gv(`${p}coldNotes`),
+    },
+    slope_and_aspect: {
+      aspect_bearing: gv(`${p}aspect`), gradient: gv(`${p}gradient`),
+      length_ft: gv(`${p}slopeLen`), face_notes: gv(`${p}faceNotes`),
+    },
+    thermal_mass: thermal.map(r => ({ element: r[0], material: r[1], orientation: r[2], estimated_effect: r[3] })),
+    stacking_functions: gv(`${p}stacking`),
+    topography: { types: gc(`${p}topo`), notes: gv(`${p}topoNotes`) },
+    sunlight: {
+      levels: gc(`${p}sun`), summer_hours: gv(`${p}sunS`),
+      winter_hours: gv(`${p}sunW`), notes: gv(`${p}sunNotes`),
+    },
+    temperature: {
+      summer_high_f: gv(`${p}tHiS`), summer_low_f: gv(`${p}tLoS`),
+      winter_high_f: gv(`${p}tHiW`), winter_low_f: gv(`${p}tLoW`),
+      last_frost: gv(`${p}lastFrost`), first_frost: gv(`${p}firstFrost`),
+      notes: gv(`${p}tempNotes`),
+    },
+    soil: {
+      compaction: gr(`${p}compact`),
+      ph_range: { low: gv(`${p}phLo`), high: gv(`${p}phHi`) },
+      texture: gc(`${p}texture`), texture_combination: gv(`${p}texComb`),
+      composition: gc(`${p}compos`), notes: gv(`${p}soilNotes`),
+    },
+    soil_amendment_history: amend.map(r => ({ date_season: r[0], amendment: r[1], amount_rate: r[2], notes: r[3] })),
+    water: {
+      drainage_character: gc(`${p}drain`), drainage_test: gr(`${p}drainTest`),
+      water_sources: gc(`${p}waterSrc`),
+      water_quality: { source_ph: gv(`${p}wPH`), hardness: gv(`${p}wHard`), sodium_sar: gv(`${p}wNa`) },
+      irrigation_system: gv(`${p}irrigDesc`),
+      other_features: gc(`${p}waterFeat`), other_features_desc: gv(`${p}waterFeatOther`),
+      notes: gv(`${p}waterNotes`),
+    },
+    wind: {
+      prevailing_direction: gv(`${p}windDir`), typical_speed: gv(`${p}windSpd`),
+      cold_frontal_direction: gv(`${p}windFront`), diurnal_pattern: gv(`${p}windDiurnal`),
+      existing_windbreaks: gv(`${p}windExist`), planned_windbreaks: gv(`${p}windPlan`),
+    },
+    vegetation: {
+      trees: gv(`${p}vegTrees`), shrubs: gv(`${p}vegShrubs`),
+      turf_groundcover: gv(`${p}vegTurf`), other: gv(`${p}vegOther`),
+    },
+    structures: { types: gc(`${p}structs`), other: gv(`${p}structOther`) },
+    observation_flags: gc(`${p}obsFlags`),
+    wildlife_edge_notes: gv(`${p}wildlife`),
+    observation_notes: gv(`${p}obsNotes`),
+    zone_notes: gv(`${p}zoneNotes`),
+  };
+}
+
+function buildData() {
+  return {
+    site: {
+      date: gv('site_date'), location: gv('site_location'),
+      coordinates: gv('site_coords'), elevation_ft: gv('site_elevation'),
+      orientation: gv('site_orientation'),
+      sunset_zone: gv('site_sunsetZone'), usda_zone: gv('site_usdaZone'),
+      notes: gv('site_notes'),
+      sectors: {
+        sun_summer: gv('site_secSunS'), sun_winter: gv('site_secSunW'),
+        wind_prevailing: gv('site_secWindP'), wind_cold_frontal: gv('site_secWindC'),
+        water_flow: gv('site_secWater'), cold_air_drainage: gv('site_secColdAir'),
+        fire: gv('site_secFire'), wildlife_edge: gv('site_secWild'),
+        neighbour_noise_view: gv('site_secNeigh'), pollution: gv('site_secPoll'),
+      },
+    },
+    microclimates: getMCIds().map(id => buildMCData(id)),
+  };
+}
+
+// ── YAML serialiser ──
+function scalarYAML(v2) {
+  if (v2 === null || v2 === undefined || v2 === '') return '~';
+  const s = String(v2);
+  const q = /[:#\[\]{}&*!|>'"%@`]/.test(s) || s.includes('\n');
+  return q ? `"${s.replace(/"/g, '\\"')}"` : s;
+}
+
+function toYAML(obj, indent = 0) {
+  const pad = '  '.repeat(indent);
+  let out = '';
+  for (const [key, value] of Object.entries(obj)) {
+    if (value === null || value === undefined || value === '') {
+      out += `${pad}${key}: ~\n`;
+    } else if (Array.isArray(value)) {
+      if (value.length === 0) {
+        out += `${pad}${key}: []\n`;
+      } else if (typeof value[0] === 'object' && value[0] !== null) {
+        // Array of objects — serialize each recursively, dash on first key
+        out += `${pad}${key}:\n`;
+        value.forEach(item => {
+          const itemStr = toYAML(item, indent + 2);
+          const nl = itemStr.indexOf('\n');
+          if (nl === -1) return;
+          const firstLine = itemStr.slice(0, nl);
+          const rest = itemStr.slice(nl + 1); // skip the first newline
+          // Strip the (indent+2)*2 leading spaces from firstLine, replace with pad+'  - '
+          const stripped = firstLine.slice((indent + 2) * 2);
+          out += `${pad}  - ${stripped}\n${rest}`;
+        });
+      } else {
+        // Array of scalars
+        out += `${pad}${key}:\n`;
+        value.forEach(v2 => { out += `${pad}  - ${scalarYAML(v2)}\n`; });
+      }
+    } else if (typeof value === 'object') {
+      out += `${pad}${key}:\n${toYAML(value, indent + 1)}`;
+    } else {
+      out += `${pad}${key}: ${scalarYAML(value)}\n`;
+    }
+  }
+  return out;
+}
+
+function generateYAML() {
+  const ids = getMCIds();
+  const count = ids.length;
+  return `# Home Garden Microclimate Site Assessment\n# Generated: ${new Date().toISOString()}\n# Microclimate zones: ${count}\n# Sunset Zone ref: https://www.sunsetwesterngardencollection.com/climate-zones/zone/arizona\n# USDA Zone ref: https://planthardiness.ars.usda.gov/PHZMWeb/\n\n` + toYAML(buildData());
+}
+
+function previewYAML() {
+  const p = document.getElementById('yaml-preview');
+  p.textContent = generateYAML();
+  p.style.display = p.style.display === 'block' ? 'none' : 'block';
+  if (p.style.display === 'block') p.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+}
+
+function downloadYAML() {
+  const yaml = generateYAML();
+  const site = gv('site_location').replace(/[^a-z0-9]/gi, '_').toLowerCase() || 'site';
+  const date = gv('site_date') || new Date().toISOString().split('T')[0];
+  const fn = `microclimate_${site}_${date}.yaml`;
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(new Blob([yaml], { type: 'text/yaml' }));
+  a.download = fn; a.click();
+  showToast(`Saved: ${fn}`);
+}
+
+function clearAll() {
+  if (!confirm('Clear everything including all zones?')) return;
+  document.getElementById('mc-list').innerHTML = '';
+  document.getElementById('assessmentForm').reset();
+  document.getElementById('yaml-preview').style.display = 'none';
+  mcCounter = 0;
+  showToast('Cleared');
+}
+
+function showToast(msg) {
+  const t = document.getElementById('toast');
+  t.textContent = msg; t.classList.add('show');
+  setTimeout(() => t.classList.remove('show'), 3000);
+}
+
+
+// ── Load from YAML file ──
+function loadFromYAML(input) {
+  const file = input.files[0];
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = function(e) {
+    try {
+      const data = jsyaml.load(e.target.result);
+      if (!data) throw new Error('Empty file');
+
+      // Clear existing state
+      document.getElementById('mc-list').innerHTML = '';
+      document.getElementById('assessmentForm').reset();
+      mcCounter = 0;
+
+      // Populate site fields
+      const s = data.site || {};
+      sv('site_date',        s.date);
+      sv('site_sunsetZone',  s.sunset_zone);
+      sv('site_usdaZone',    s.usda_zone);
+      sv('site_elevation',   s.elevation_ft);
+      sv('site_location',    s.location);
+      sv('site_coords',      s.coordinates);
+      sv('site_orientation', s.orientation);
+      sv('site_notes',       s.notes);
+      const ssec = s.sectors || {};
+      sv('site_secSunS',   ssec.sun_summer);
+      sv('site_secSunW',   ssec.sun_winter);
+      sv('site_secWindP',  ssec.wind_prevailing);
+      sv('site_secWindC',  ssec.wind_cold_frontal);
+      sv('site_secWater',  ssec.water_flow);
+      sv('site_secColdAir',ssec.cold_air_drainage);
+      sv('site_secFire',   ssec.fire);
+      sv('site_secWild',   ssec.wildlife_edge);
+      sv('site_secNeigh',  ssec.neighbour_noise_view);
+      sv('site_secPoll',   ssec.pollution);
+
+      // Populate each microclimate
+      const mcs = data.microclimates || [];
+      mcs.forEach(mc => {
+        addMicroclimate();
+        const id = mcCounter;
+        const p = `mc${id}_`;
+        populateMC(p, id, mc);
+      });
+
+      showToast(`Loaded: ${file.name} (${mcs.length} zone${mcs.length !== 1 ? 's' : ''})`);
+    } catch(err) {
+      alert('Could not parse YAML file: ' + err.message);
+    }
+    // Reset file input so the same file can be reloaded if needed
+    input.value = '';
+  };
+  reader.readAsText(file);
+}
+
+function sv(id, val) {
+  const el = document.getElementById(id);
+  if (el && val !== undefined && val !== null) el.value = val;
+}
+
+function sc(name, values) {
+  if (!values || !Array.isArray(values)) return;
+  document.querySelectorAll(`input[name="${name}"]`).forEach(cb => {
+    cb.checked = values.includes(cb.value);
+  });
+}
+
+function sr(name, value) {
+  if (!value) return;
+  const el = document.querySelector(`input[name="${name}"][value="${value}"]`);
+  if (el) el.checked = true;
+}
+
+function populateMC(p, id, mc) {
+  // Update name and badge
+  sv(`${p}name`, mc.name);
+  updateBadge(id);
+
+  // Zone
+  sr(`${p}permZone`, mc.permaculture_zone);
+  sv(`${p}permZoneNotes`, mc.perm_zone_notes);
+
+  // Cold air drainage
+  const ca = mc.cold_air_drainage || {};
+  sv(`${p}coldSrc`,   ca.source);
+  sv(`${p}coldOut`,   ca.outlet);
+  sv(`${p}coldDams`,  ca.potential_dams);
+  sr(`${p}coldPos`,   ca.site_position);
+  sv(`${p}coldNotes`, ca.notes);
+
+  // Slope
+  const sl = mc.slope_and_aspect || {};
+  sv(`${p}aspect`,    sl.aspect_bearing);
+  sv(`${p}gradient`,  sl.gradient);
+  sv(`${p}slopeLen`,  sl.length_ft);
+  sv(`${p}faceNotes`, sl.face_notes);
+
+  // Thermal mass table
+  if (Array.isArray(mc.thermal_mass) && mc.thermal_mass.length > 0) {
+    const tbody = document.getElementById(`${p}thermalBody`);
+    tbody.innerHTML = '';
+    mc.thermal_mass.forEach(row => {
+      const tr = document.createElement('tr');
+      tr.innerHTML = `<td><input type="text" value="${esc(row.element)}"></td><td><input type="text" value="${esc(row.material)}"></td><td><input type="text" value="${esc(row.orientation)}"></td><td><input type="text" value="${esc(row.estimated_effect)}"></td><td><button type="button" class="remove-row" onclick="removeRow(this)">x</button></td>`;
+      tbody.appendChild(tr);
+    });
+  }
+
+  sv(`${p}stacking`, mc.stacking_functions);
+
+  // Topography
+  const topo = mc.topography || {};
+  sc(`${p}topo`, topo.types);
+  sv(`${p}topoNotes`, topo.notes);
+
+  // Sunlight
+  const sun = mc.sunlight || {};
+  sc(`${p}sun`, sun.levels);
+  sv(`${p}sunS`,     sun.summer_hours);
+  sv(`${p}sunW`,     sun.winter_hours);
+  sv(`${p}sunNotes`, sun.notes);
+
+  // Temperature
+  const temp = mc.temperature || {};
+  sv(`${p}tHiS`,       temp.summer_high_f);
+  sv(`${p}tLoS`,       temp.summer_low_f);
+  sv(`${p}tHiW`,       temp.winter_high_f);
+  sv(`${p}tLoW`,       temp.winter_low_f);
+  sv(`${p}lastFrost`,  temp.last_frost);
+  sv(`${p}firstFrost`, temp.first_frost);
+  sv(`${p}tempNotes`,  temp.notes);
+
+  // Soil
+  const soil = mc.soil || {};
+  sr(`${p}compact`, soil.compaction);
+  const ph = soil.ph_range || {};
+  sv(`${p}phLo`, ph.low);
+  sv(`${p}phHi`, ph.high);
+  sc(`${p}texture`, soil.texture);
+  sv(`${p}texComb`,   soil.texture_combination);
+  sc(`${p}compos`, soil.composition);
+  sv(`${p}soilNotes`, soil.notes);
+
+  // Amendment history table
+  if (Array.isArray(mc.soil_amendment_history) && mc.soil_amendment_history.length > 0) {
+    const tbody = document.getElementById(`${p}amendBody`);
+    tbody.innerHTML = '';
+    mc.soil_amendment_history.forEach(row => {
+      const tr = document.createElement('tr');
+      tr.innerHTML = `<td><input type="text" value="${esc(row.date_season)}"></td><td><input type="text" value="${esc(row.amendment)}"></td><td><input type="text" value="${esc(row.amount_rate)}"></td><td><input type="text" value="${esc(row.notes)}"></td><td><button type="button" class="remove-row" onclick="removeRow(this)">x</button></td>`;
+      tbody.appendChild(tr);
+    });
+  }
+
+  // Water
+  const w = mc.water || {};
+  sc(`${p}drain`,     w.drainage_character);
+  sr(`${p}drainTest`, w.drainage_test);
+  sc(`${p}waterSrc`,  w.water_sources);
+  const wq = w.water_quality || {};
+  sv(`${p}wPH`,   wq.source_ph);
+  sv(`${p}wHard`, wq.hardness);
+  sv(`${p}wNa`,   wq.sodium_sar);
+  sv(`${p}irrigDesc`,      w.irrigation_system);
+  sc(`${p}waterFeat`,      w.other_features);
+  sv(`${p}waterFeatOther`, w.other_features_desc);
+  sv(`${p}waterNotes`,     w.notes);
+
+  // Wind
+  const wind = mc.wind || {};
+  sv(`${p}windDir`,     wind.prevailing_direction);
+  sv(`${p}windSpd`,     wind.typical_speed);
+  sv(`${p}windFront`,   wind.cold_frontal_direction);
+  sv(`${p}windDiurnal`, wind.diurnal_pattern);
+  sv(`${p}windExist`,   wind.existing_windbreaks);
+  sv(`${p}windPlan`,    wind.planned_windbreaks);
+
+  // Vegetation
+  const veg = mc.vegetation || {};
+  sv(`${p}vegTrees`,  veg.trees);
+  sv(`${p}vegShrubs`, veg.shrubs);
+  sv(`${p}vegTurf`,   veg.turf_groundcover);
+  sv(`${p}vegOther`,  veg.other);
+
+  // Structures
+  const str = mc.structures || {};
+  sc(`${p}structs`,     str.types);
+  sv(`${p}structOther`, str.other);
+
+  // Observations
+  sc(`${p}obsFlags`, mc.observation_flags);
+  sv(`${p}wildlife`, mc.wildlife_edge_notes);
+  sv(`${p}obsNotes`, mc.observation_notes);
+  sv(`${p}zoneNotes`, mc.zone_notes);
+}
+
+function esc(val) {
+  if (val === null || val === undefined) return '';
+  return String(val).replace(/&/g,'&amp;').replace(/"/g,'&quot;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+}
+
+
+// Start with one zone open by default
+addMicroclimate();
+</script>
+</body>
+</html>
